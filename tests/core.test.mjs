@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync,readFileSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {normalizeUsage,available,employeeState,validatePlan,canApprove} from '../core/model.mjs';
+import {Store} from '../server/store.mjs';
+const raw=(p=20,s=30)=>({rateLimits:{primary:{usedPercent:p,windowDurationMins:300,resetsAt:100},secondary:{usedPercent:s,windowDurationMins:10080,resetsAt:200}}});
+test('reported percentages, windows and seconds are normalized',()=>{const u=normalizeUsage(raw(),123);assert.equal(u.primary.remaining,80);assert.equal(u.secondary.resetsAt,200000);assert.equal(u.checkedAt,123);});
+test('weekly exhaustion blocks even with short-window energy',()=>{const a={connected:true,usage:normalizeUsage(raw(5,100))};assert.equal(available(a),false);assert.equal(employeeState({},a),'sleeping');});
+test('reset time passing does not invent capacity',()=>{const a={connected:true,usage:normalizeUsage(raw(100,10))};assert.equal(available(a),false);});
+test('stale and missing usage never allow execution',()=>{assert.equal(available({connected:true,usage:normalizeUsage(raw(),1)}),false);assert.equal(available({connected:true}),false);assert.equal(available({connected:true,usage:normalizeUsage({rateLimits:{primary:null}})}),false);});
+test('fresh positive usage permits work but manual sleep persists',()=>{const a={connected:true,usage:normalizeUsage(raw())};assert.equal(available(a),true);assert.equal(employeeState({sleeping:true},a),'sleeping');assert.equal(employeeState({},a,true),'working');});
+test('provider blocks override bars',()=>{const r=raw();r.rateLimits.rateLimitReachedType='weekly';assert.equal(available({connected:true,usage:normalizeUsage(r)}),false);});
+test('plans reject unknown roles and executable-looking malformed content',()=>{assert.throws(()=>validatePlan({tasks:[{owner:'root',title:'x',instructions:'x'}]}));assert.throws(()=>validatePlan({tasks:[]}));assert.equal(validatePlan({tasks:[{owner:'qa',title:'Test',instructions:'Run tests'}]}).length,1);});
+test('approval cannot be replayed or used after expiry',()=>{assert.equal(canApprove({status:'pending',expiresAt:200},100),true);assert.equal(canApprove({status:'executing',expiresAt:200},100),false);assert.equal(canApprove({status:'pending',expiresAt:100},100),false);});
+test('vault tasks survive restart and external note changes are authoritative',()=>{const dir=mkdtempSync(join(tmpdir(),'pixel-'));let s=new Store(dir);const t=s.createTask({owner:'qa',title:'Quotes: "hello"\nand newlines',instructions:'test',status:'todo'});s.close();s=new Store(dir);assert.equal(s.tasks()[0].title,t.title);const path=join(s.vault,'Projects/office/Tasks',t.id+'.md');writeFileSync(path,readFileSync(path,'utf8').replace('status: "todo"','status: "review"'));assert.equal(s.tasks()[0].status,'review');assert.throws(()=>s.task({id:'../../evil'}));s.close();rmSync(dir,{recursive:true,force:true});});
