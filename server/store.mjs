@@ -2,12 +2,14 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync,readFileSync,writeFileSync,renameSync,readdirSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {Knowledge} from './knowledge.mjs';
 import {roles,idValid} from '../core/model.mjs';
 export class Store {
  constructor(dir,{demo=false,vault}={}) {
   mkdirSync(dir,{recursive:true,mode:0o700});this.dir=dir;this.vault=vault||join(dir,'vault');
   for(const p of ['Company','Employees','Projects/office/Tasks','Inbox','Daily']) mkdirSync(join(this.vault,p),{recursive:true});
   this.db=new DatabaseSync(join(dir,'office.sqlite'));this.db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS records (id TEXT PRIMARY KEY, value TEXT); CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, time INTEGER, text TEXT)');
+  this.knowledge=new Knowledge(this.vault,this.db);
   this.state=this.get('state')||{employees:roles.map(r=>({...r,active:!r.optional,accountId:null,autoWake:false,paused:false})),accounts:[],approvals:[],settings:{project:'My first project'},demo};
   if(!this.get('state')&&demo) {
    this.state.settings.project='Studio / Launch website';
@@ -23,9 +25,10 @@ export class Store {
  save(){this.db.prepare('INSERT OR REPLACE INTO records VALUES (?,?)').run('state',JSON.stringify(this.state));}
  event(text){this.db.prepare('INSERT INTO events(time,text) VALUES (?,?)').run(Date.now(),text);}
  events(){return this.db.prepare('SELECT * FROM events ORDER BY id DESC LIMIT 50').all();}
- note(path,text){if(!/^[a-zA-Z0-9_./-]+$/.test(path)||path.includes('..'))throw new Error('Invalid note path');const p=join(this.vault,path);const temp=p+'.tmp';writeFileSync(temp,text);renameSync(temp,p);}
- task(t){if(!idValid(t.id))throw new Error('Invalid task id');const {output='',...meta}=t;this.note('Projects/office/Tasks/'+t.id+'.md','---\n'+Object.entries(meta).map(([k,v])=>k+': '+JSON.stringify(v)).join('\n')+'\n---\n'+output);return t;}
+ note(path,text){return this.knowledge.write(path,text,{internal:true});}
+ task(t){if(!idValid(t.id))throw new Error('Invalid task id');const {output='',...meta}=t;this.note('Projects/office/Tasks/'+t.id+'.md','---\n'+Object.entries(meta).filter(([,v])=>v!==undefined).map(([k,v])=>k+': '+JSON.stringify(v)).join('\n')+'\n---\n'+output);return t;}
  tasks(){return readdirSync(join(this.vault,'Projects/office/Tasks')).filter(f=>f.endsWith('.md')).map(f=>{try {const raw=readFileSync(join(this.vault,'Projects/office/Tasks',f),'utf8');const [,head,body]=raw.split(/^---\s*$/m);const task=Object.fromEntries(head.trim().split('\n').map(line=>{const i=line.indexOf(':');return [line.slice(0,i),JSON.parse(line.slice(i+1))];}));return {...task,output:body?.trim()||''};}catch{return null;}}).filter(Boolean).sort((a,b)=>a.createdAt-b.createdAt);}
  createTask(t){return this.task({id:randomUUID(),createdAt:Date.now(),updatedAt:Date.now(),status:'todo',...t});}
  close(){this.db.close();}
 }
+

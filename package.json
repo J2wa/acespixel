@@ -1,13 +1,13 @@
 {
   "name": "pixel-office",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "start": "node scripts/start.mjs",
     "demo": "node --env-file-if-exists=.env server/index.mjs --demo",
     "dev": "node --env-file-if-exists=.env server/index.mjs --demo",
     "test": "node --test tests/*.test.mjs",

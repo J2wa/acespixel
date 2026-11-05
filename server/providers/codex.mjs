@@ -1,3 +1,4 @@
+import {launchSpec} from './launcher.mjs';
 import {spawn} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import {EventEmitter} from 'node:events';
@@ -7,12 +8,14 @@ export class Codex extends EventEmitter {
  async start(){
   if(this.ready)return this.ready;
   this.ready=(async()=>{
-   const env={};for(const k of ['PATH','HOME','USER','TMPDIR','TEMP','SystemRoot'])if(process.env[k])env[k]=process.env[k];env.CODEX_HOME=this.home;
-   this.proc=spawn(this.bin,['app-server'],{env,stdio:['pipe','pipe','pipe']});
+   const env={};for(const k of ['PATH','Path','HOME','USER','USERPROFILE','APPDATA','LOCALAPPDATA','TMPDIR','TEMP','SystemRoot','CODEX_CA_CERTIFICATE','SSL_CERT_FILE'])if(process.env[k])env[k]=process.env[k];env.CODEX_HOME=this.home;
+   const spec=launchSpec(this.bin);
+   this.proc=spawn(spec.command,[...spec.args,'app-server'],{env,windowsHide:true,stdio:['pipe','pipe','pipe']});
+   const proc=this.proc;
    this.proc.stdin.on('error',()=>{});this.proc.stderr.on('data',()=>{});
-   const fail=error=>{for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();this.ready=null;this.emit('offline',error);};
+   const fail=error=>{if(this.proc!==proc)return;for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();this.ready=null;this.emit('offline',error);};
    this.proc.on('error',fail);this.proc.on('exit',()=>fail(new Error('Codex process stopped')));
-   createInterface({input:this.proc.stdout}).on('line',line=>{let m;try{m=JSON.parse(line);}catch{return;}
+   createInterface({input:this.proc.stdout}).on('line',line=>{if(this.proc!==proc)return;let m;try{m=JSON.parse(line);}catch{return;}
     if(m.id!==undefined && m.method){ // Never silently approve tool escalation.
      this.proc.stdin.write(JSON.stringify({id:m.id,error:{code:-32601,message:'Interactive escalation is disabled in Pixel Office. Revise the task within its sandbox.'}})+'\n');return;
     }
@@ -21,7 +24,7 @@ export class Codex extends EventEmitter {
    });
    await this.request('initialize',{clientInfo:{name:'pixel_office',title:'Pixel Office',version:'0.1.0'}});
    this.proc.stdin.write(JSON.stringify({method:'initialized',params:{}})+'\n');
-  })();return this.ready;
+  })();try{return await this.ready;}catch(error){this.ready=null;throw error;}
  }
  request(method,params={}){return new Promise((resolve,reject)=>{const id=++this.seq;const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('Codex request timed out: '+method));},30000);this.pending.set(id,{resolve,reject,timer});this.proc.stdin.write(JSON.stringify({id,method,params})+'\n');});}
  async run(text,cwd,{readOnly=false,onText=()=>{}}={}){
@@ -40,5 +43,6 @@ export class Codex extends EventEmitter {
    this.request('turn/start',{threadId,input:[{type:'text',text}]}).catch(e=>{cleanup();reject(e);});
   });
  }
- stop(){this.proc?.kill();this.ready=null;}
+ stop(){const proc=this.proc;this.proc=null;this.ready=null;for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error('Codex stopped'));}this.pending.clear();proc?.kill();if(proc)this.emit('offline',new Error('Codex stopped'));}
 }
+
