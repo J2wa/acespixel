@@ -173,3 +173,13 @@ For local changes run `npm test` and `npm run build`. Production website deploym
 Run `npm test` and `npm run build`. Automated coverage includes authenticated knowledge APIs, history/restore, stale edits, task metadata protection, symlink/path rejection, escaped Markdown, account login completion/cancel/expiry, and existing approval gates. Device-login tests use a simulated Codex provider and do not authenticate real accounts.
 
 The Vercel frontend remains optional. To use it remotely, your manually started PC runtime must have an authenticated HTTPS endpoint and `PIXEL_RUNTIME_URL` must point to it. When your PC is offline, the hosted site cannot execute tasks. Localhost works without Vercel or a tunnel. No tunnel, paid hosting, OS power settings or startup behavior is configured by this change.
+
+## Single Windows executable
+
+Download `PixelOffice.exe` (Windows x64) and double-click it. Node.js, Codex CLI and Git are bundled; no separate installation of those tools is needed. First launch extracts the tools and opens your browser. Keep the console open and the PC awake while workers run. Press Ctrl+C to stop. Nothing is registered to start with Windows.
+
+Accounts, notes and task data live in `%LOCALAPPDATA%\PixelOffice\data`. Settings live in `%LOCALAPPDATA%\PixelOffice\config\.env`. Replacing the EXE preserves these folders. Existing source-checkout data is not automatically moved: set `PIXEL_DATA_DIR` in that configuration file to your existing absolute data directory to reuse it. The console prints the owner token for browser login. Connect each Codex account from the Accounts screen. Target projects may still require their own dependencies and GitHub/Vercel credentials.
+
+This is a single download, with tools extracted on disk at runtime. Allow about 1 GB of free disk space. It is unsigned. The optional Vercel website still needs an authenticated HTTPS connection to your PC; the EXE itself opens localhost.
+
+To build: use Node.js 24.22.1 and Python 3.12+, then run `python scripts/build-windows.py`. The output is `release/PixelOffice.exe` and its SHA-256 checksum. `PixelOffice.exe --self-test` checks the bundled tools, SQLite, UI and owner login on Windows without signing into a Codex account. The Windows packaging workflow performs that check and publishes a downloadable build artifact.

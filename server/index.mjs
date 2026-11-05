@@ -31,9 +31,12 @@ function loginFor(a){
 }
 function accountIdle(a){if(locks.has(a.id)||state.employees.some(e=>e.accountId===a.id&&running.has(e.id)))throw new Error('Wait for the account’s active task or refresh to finish.');}
 function manualCommands(a){
- const home=a.home;
- return {posix:"CODEX_HOME='"+home.replaceAll("'", "'\"'\"'")+"' codex login",powershell:"$env:CODEX_HOME = '"+home.replaceAll("'", "''")+"'; codex login"};
+ const home=a.home,bin=process.env.PIXEL_CODEX_BIN||'codex';
+ const posix=value=>"'"+value.replaceAll("'", "'\"'\"'")+"'";
+ const ps=value=>"'"+value.replaceAll("'", "''")+"'";
+ return {posix:'CODEX_HOME='+posix(home)+' '+posix(bin)+' login',powershell:'$env:CODEX_HOME = '+ps(home)+'; & '+ps(bin)+' login'};
 }
+
 async function energy(a,key,consume){
  await refresh(a);
  if(consume&&!demo){if(!idValid(key))throw new Error('A stable reset attempt ID is required.');if(a.usage.credits<1)throw new Error('No earned reset credits available.');if(!a.resetAttempt||a.resetAttempt.status!=='pending')a.resetAttempt={key,status:'pending'};store.save();await client(a).request('account/rateLimitResetCredit/consume',{idempotencyKey:a.resetAttempt.key});a.resetAttempt.status='completed';store.save();await refresh(a);}
