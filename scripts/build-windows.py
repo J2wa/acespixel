@@ -28,7 +28,16 @@ def main():
  codex=download(f'https://registry.npmjs.org/@openai/codex/-/codex-{CODEX}-win32-x64.tgz',DOWNLOADS/f'openai-codex-{CODEX}-win32-x64.tgz')
  assert base64.b64encode(sha(codex,'sha512')).decode()==CODEX_INTEGRITY,'Codex checksum mismatch'
  codex_dir=PAYLOAD/'tools/codex';shutil.rmtree(codex_dir,ignore_errors=True);codex_dir.mkdir(parents=True)
- with tarfile.open(codex) as tar:tar.extractall(codex_dir,filter='data')
+ with tarfile.open(codex) as tar:
+  tar.extractall(codex_dir,filter='data')
+  for member in tar.getmembers():
+   if member.isfile():
+    extracted=codex_dir/member.name
+    expected_bytes=tar.extractfile(member).read()
+    # Verify the actual extraction, not only the downloaded archive.
+    if not extracted.exists() or sha(extracted)!=hashlib.sha256(expected_bytes).digest():
+     extracted.write_bytes(expected_bytes)
+    assert extracted.stat().st_size==member.size and sha(extracted)==hashlib.sha256(expected_bytes).digest(),'Codex extraction failed: '+member.name
  download(f'https://raw.githubusercontent.com/openai/codex/rust-v{CODEX}/LICENSE',codex_dir/'LICENSE')
  git=download(f'https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-{GIT}-64-bit.zip',DOWNLOADS/'mingit.zip')
  assert sha(git).hex()==GIT_SHA,'Git checksum mismatch'
