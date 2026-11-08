@@ -1,0 +1,37 @@
+name: Windows EXE
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/windows/**'
+      - 'server/**'
+      - 'core/**'
+      - 'public/**'
+      - '.github/workflows/windows.yml'
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+      - run: node scripts/windows/prepare.mjs windows-build
+      - run: node --experimental-sea-config windows-build/sea-config.json
+      - shell: pwsh
+        run: |
+          Copy-Item (Get-Command node).Source windows-build/ACES-Pixel.exe
+          npm install --prefix windows-build --ignore-scripts postject@1.0.0-alpha.6
+          node windows-build/node_modules/postject/dist/cli.js windows-build/ACES-Pixel.exe NODE_SEA_BLOB windows-build/sea.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+          node scripts/windows/unsigned.mjs windows-build/ACES-Pixel.exe
+          if ($LASTEXITCODE -ne 0) { throw 'EXE injection failed' }
+      - shell: pwsh
+        run: ./scripts/windows/smoke.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ACES-Pixel-Windows-x64
+          path: windows-build/ACES-Pixel.exe
+          retention-days: 30

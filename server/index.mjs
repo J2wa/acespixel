@@ -97,7 +97,7 @@ async function api(req,res,path){
  case '/api/releases/preview':{if(demo)throw new Error('Real previews require a live connection.');result=await integrations.preview();log('Vercel preview requested: '+result.id);break;}
 
  case '/api/accounts/add':{
-  if(typeof b.label!=='string'||!b.label.trim())throw new Error('Enter the employee account name.');const id=randomUUID();const home=join(root,'accounts',id);mkdirSync(home,{recursive:true,mode:0o700});const a={id,label:b.label.slice(0,80),home,connected:false,usage:null};state.accounts.push(a);result={id,loginCommand:'CODEX_HOME='+JSON.stringify(home)+' codex login'};log('Account added: '+a.label);break;
+  if(typeof b.label!=='string'||!b.label.trim())throw new Error('Enter the employee account name.');const id=randomUUID();const home=join(root,'accounts',id);mkdirSync(home,{recursive:true,mode:0o700});const a={id,label:b.label.slice(0,80),home,connected:false,usage:null};state.accounts.push(a);result={id,loginCommand:process.platform==='win32'?"$env:CODEX_HOME='"+home.replaceAll("'","''")+"'; & '"+(process.env.PIXEL_CODEX_BIN||'codex').replaceAll("'","''")+"' login":'CODEX_HOME='+JSON.stringify(home)+' codex login'};log('Account added: '+a.label);break;
  }
  case '/api/accounts/refresh':case '/api/accounts/energy':{
   const a=account(b.id);if(locks.has(a.id))throw new Error('Account refresh already in progress.');locks.add(a.id);try{if(path.endsWith('energy'))await energy(a,b.attemptId,b.consume===true);else await refresh(a);}finally{locks.delete(a.id);}break;

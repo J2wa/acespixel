@@ -7,7 +7,7 @@ export class Codex extends EventEmitter {
  async start(){
   if(this.ready)return this.ready;
   this.ready=(async()=>{
-   const env={};for(const k of ['PATH','HOME','USER','TMPDIR','TEMP','SystemRoot'])if(process.env[k])env[k]=process.env[k];env.CODEX_HOME=this.home;
+   const env={};for(const k of ['PATH','HOME','USER','TMPDIR','TEMP','SystemRoot','USERPROFILE','APPDATA','LOCALAPPDATA','PATHEXT','COMSPEC'])if(process.env[k])env[k]=process.env[k];env.CODEX_HOME=this.home;
    this.proc=spawn(this.bin,['app-server'],{env,stdio:['pipe','pipe','pipe']});
    this.proc.stdin.on('error',()=>{});this.proc.stderr.on('data',()=>{});
    const fail=error=>{for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();this.ready=null;this.emit('offline',error);};
