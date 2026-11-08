@@ -10,7 +10,7 @@ Install Node.js 24 or newer. Unzip this folder, open Terminal in it, and run:
 npm run demo
 ```
 
-Open http://localhost:4317. No npm dependencies need installing. Demo mode uses a separate database, sample accounts, simulated task outputs, and no external writes. Click an employee, send a command, check the task board, give Sam an energy drink, or prepare and approve a demo release.
+Open http://localhost:4317. No npm dependencies need installing. Demo mode uses a separate database, sample accounts, simulated task outputs, and no external writes. Click an employee, send a command, check the task board, give QA an energy drink, or prepare and approve a demo release.
 
 To start the real office:
 
@@ -92,10 +92,10 @@ The responsive UI is served by the same host. For a trusted private network, set
 
 This is a functional v0.1, with live adapters implemented but not validated against your five accounts, repository or Vercel project. Those credentials and project IDs were not available during development.
 
-- Original Canvas artwork and lightweight native JS UI; this is inspired by the linked pixel-agents concept, not a fork containing its renderer. Node HTTP + SSE replaces Fastify/WebSocket for a dependency-free package; SQLite and Markdown are implemented.
-- One project/owner and sequential execution per host. Switching to another project requires another instance/configuration. Optional hiring and account swaps are explicit owner actions.
+- User-supplied pixel sprite artwork and lightweight native JS UI; this is inspired by the linked pixel-agents concept, not a fork containing its renderer. Node HTTP + SSE replaces Fastify/WebSocket for a dependency-free package; SQLite and Markdown are implemented.
+- One project/owner and sequential execution per host. The Connections screen can switch projects after queued work and approvals are finished. Optional hiring and account swaps are explicit owner actions.
 - PR publishing and merge approval are visible owner actions. Designer approval is enforced by repository required reviews, not a separate automated designer-verdict workflow.
-- Vercel Git integration creates previews; this app validates and promotes them. Environment-variable editing, production health checks, and automatic rollback are not implemented. Use Vercel's dashboard for those operations.
+- The Connections screen requests Vercel previews from the selected main commit; this app validates and promotes them. Environment-variable editing, production health checks, and automatic rollback are not implemented. Use Vercel's dashboard for those operations.
 - No browser login automation, quota scraping, manual fabrication of live quotas, credential sharing between people, or background account rotation.
 - Tasks requiring network/tool escalation remain blocked; revise their scope or provision dependencies on the host. Malformed CEO/QA JSON fails visibly and can be retried.
 - Mobile CSS is provided; a real-device run and live integration acceptance test remain necessary before daily use.
@@ -122,7 +122,7 @@ Official implementation references, checked November 5, 2026:
 
 - https://learn.chatgpt.com/docs/app-server
 - https://learn.chatgpt.com/docs/config-file/config-advanced
-- https://vercel.com/docs/cli/promote
+- https://vercel.com/docs/rest-api/projects/point-production-traffic-to-a-given-deployment
 - https://vercel.com/docs/cli/global-options
 - Inspiration: https://github.com/pixel-agents-hq/pixel-agents
 
@@ -142,3 +142,32 @@ To activate the hosted office:
 Do not set `PIXEL_RUNTIME_URL` to the Vercel website itself. It must point to the separate persistent runtime. Optional `PIXEL_GATEWAY_SECRET` is reserved for an upstream reverse proxy that validates the corresponding `X-Pixel-Gateway` header. Owner authentication remains required even without that additional proxy control.
 
 For local changes run `npm test` and `npm run build`. Production website deployment is distinct from the app's owner approval gate for employee-managed releases.
+
+
+## v0.3 — studio UI, account connections and workflow commands
+
+The supplied sprite atlas powers the midnight-purple office and recharge lounge. Core roles follow gstack terminology: CEO / Founder, Staff Engineer, QA Lead, Senior Designer and Release Engineer. Optional seats are YC Office Hours and Eng Manager. These are original Codex workflow adaptations inspired by https://github.com/garrytan/gstack; gstack itself and its Bun/browser/Claude dependencies are not installed.
+
+### Connect services in the app
+
+After starting and signing into the persistent host, open **Connections**. Connect a GitHub token, load writable repositories and select the working repository. The host clones it and uses isolated task branches. Connect a Vercel token, choose the personal/team scope, load projects and select the deployment project. Existing environment-based connections remain supported. Previews upload tracked source from the exact main commit directly to Vercel; no separate Vercel GitHub login connection is needed. Symlinks, runtime folders, private key files and .env files (except .env.example) are excluded. Inline source is limited to 12 MB; larger projects fail visibly. Lists show the first 100 results.
+
+Vercel project selection disables automatic assignment of production domains, so future previews require the office approval action to become production. Preview creation uses the current main commit; once Vercel reports READY, paste the returned deployment ID into Approvals. Exact project, main SHA, expiry and one-use approval checks remain enforced. Vercel CLI is no longer required.
+
+Tokens entered into Connections are authenticated before saving, encrypted with AES-256-GCM in `.runtime/live/connections.enc`, and never returned in API state. The encryption key is stored locally with owner-only file permissions; protect host access and back up both files together. Environment-provided credentials remain environment-provided. Codex child processes do not inherit integration tokens. Do not commit `.runtime` or `.env`. Finish tasks and pending approvals before switching repository or deployment project.
+
+### Workflows
+
+- `/office-hours`: product framing and decision document.
+- `/autoplan`: sequential product, design, developer experience, engineering, implementation and QA task plan.
+- `/review`: read-only staff engineering review.
+- `/plan-design-review`: read-only accessibility, visual hierarchy and responsive design review.
+- `/qa-only`: report actual existing test results without product edits.
+- `/qa`: reproduce, repair and test defects.
+- `/verify`: build/test/fix cycle with evidence.
+- `/ship`: tests, review, release notes and configuration; publication uses the app's PR and approval controls.
+- `/retro`: retrospective from task handoff history.
+
+Report-only work can be accepted without a code PR. Findings are saved in task Markdown and employee notes. No tool can guarantee a successful model output: failures remain visible as blocked tasks. These commands do not install gstack or reproduce its custom browser automation.
+
+Generated projects may use **Turso** for a requested database and **Resend** for requested transactional email. They are optional project dependencies, not required office integrations. This office continues using built-in SQLite and Markdown on its persistent host. Browser QA requiring tooling absent from a project is reported as a gap rather than fabricated.

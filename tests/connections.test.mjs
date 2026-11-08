@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {Connections} from '../server/connections.mjs';
+import {workflow} from '../core/workflows.mjs';
+test('connection credentials survive restart encrypted and never enter status',()=>{const root=mkdtempSync(join(tmpdir(),'pixel-secrets-'));try{const c=new Connections(root);c.data.github={token:'sensitive-token',label:'owner'};c.save();assert.ok(!readFileSync(c.file).includes('sensitive-token'));const reopened=new Connections(root);assert.equal(reopened.token('github'),'sensitive-token');assert.ok(!JSON.stringify(reopened.status()).includes('sensitive-token'));}finally{rmSync(root,{recursive:true,force:true});}});
+test('workflow routing distinguishes report-only reviews from implementation',()=>{assert.equal(workflow('/review security').report,true);assert.equal(workflow('/qa login flow').owner,'qa');assert.equal(workflow('/ship release').owner,'deploy');assert.equal(workflow('Build a website'),null);assert.throws(()=>workflow('/unknown'),/Unknown workflow/);});
+test('failed credential validation cannot replace saved credentials',async()=>{const root=mkdtempSync(join(tmpdir(),'pixel-connect-'));try{const c=new Connections(root);c.data.github={token:'existing-secret'};c.request=async()=>{throw new Error('Unauthorized');};await assert.rejects(()=>c.connect('github','invalid-secret'),/Unauthorized/);assert.equal(c.token('github'),'existing-secret');}finally{rmSync(root,{recursive:true,force:true});}});

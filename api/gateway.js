@@ -1,4 +1,4 @@
-const allowed=new Set(['state','events','login','accounts/add','accounts/refresh','accounts/energy','employees/update','employees/hire','commands','tasks/retry','tasks/accept','tasks/pr','tasks/merge-request','releases/request','approvals/resolve']);
+const allowed=new Set(['connections/connect','connections/repositories','connections/teams','connections/projects','connections/select','releases/preview','state','events','login','accounts/add','accounts/refresh','accounts/energy','employees/update','employees/hire','commands','tasks/retry','tasks/accept','tasks/pr','tasks/merge-request','releases/request','approvals/resolve']);
 const reply=(body,status)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 async function handle(request){
  const url=new URL(request.url),route=url.searchParams.get('route')||url.pathname.replace(/^\/api\//,'');

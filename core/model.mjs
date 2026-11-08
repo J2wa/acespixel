@@ -1,11 +1,11 @@
 export const roles = [
- {id:'ceo',name:'Alex',role:'CEO',color:'#c5a5ff',prefix:'plan'},
- {id:'developer',name:'Kai',role:'Developer',color:'#7cb5ff',prefix:'feat'},
- {id:'qa',name:'Sam',role:'QA tester',color:'#7be0b4',prefix:'qa'},
- {id:'designer',name:'Mia',role:'UI/UX designer',color:'#f3a6c8',prefix:'design'},
- {id:'deploy',name:'Leo',role:'Deployment manager',color:'#f3ca83',prefix:'deploy'},
- {id:'analyst',name:'Jules',role:'Business analyst',color:'#8bdddf',prefix:'analysis',optional:true},
- {id:'database',name:'Noah',role:'Database operator',color:'#ada8ff',prefix:'db',optional:true}
+ {id:'ceo',name:'Founder',role:'CEO / Founder',color:'#c5a5ff',prefix:'plan'},
+ {id:'developer',name:'Engineer',role:'Staff Engineer',color:'#7cb5ff',prefix:'feat'},
+ {id:'qa',name:'QA',role:'QA Lead',color:'#7be0b4',prefix:'qa'},
+ {id:'designer',name:'Designer',role:'Senior Designer',color:'#f3a6c8',prefix:'design'},
+ {id:'deploy',name:'Release',role:'Release Engineer',color:'#f3ca83',prefix:'deploy'},
+ {id:'analyst',name:'Advisor',role:'YC Office Hours',color:'#8bdddf',prefix:'analysis',optional:true},
+ {id:'database',name:'Manager',role:'Eng Manager',color:'#ada8ff',prefix:'db',optional:true}
 ];
 export const idValid = id => typeof id==='string' && /^[a-zA-Z0-9_-]{1,80}$/.test(id);
 export function normalizeUsage(raw, now=Date.now()) {
